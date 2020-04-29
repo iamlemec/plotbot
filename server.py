@@ -4,8 +4,9 @@ import toml
 import asyncio
 import discord
 
-auth = toml.load(open('auth.toml'))
-conf = toml.load(open('conf.toml'))
+bot_dir = os.path.dirname(os.path.realpath(__file__))
+auth = toml.load(open(f'{bot_dir}/auth.toml'))
+conf = toml.load(open(f'{bot_dir}/conf.toml'))
 
 client = discord.Client()
 channels = []
@@ -21,29 +22,36 @@ async def on_ready():
                 print(c.name)
                 channels.append((g, c))
 
-@client.event
-async def on_message(ctx):
-    if 'hello plotbot' in str(ctx.content.lower()):
-        await ctx.channel.send('hello!')
+async def send_discord(file, message, server, channel):
+    sent = False
+    for g, c in channels:
+        if g.name == server and c.name == channel:
+            await c.send(message, file=file)
+            sent = True
+    return sent
 
 async def handle_input(reader, writer):
-    data = await reader.read()
+    data = await reader.read(4092)
     spec = json.loads(data.decode())
     path, mess, serv, chan = spec['path'], spec['message'], spec['server'], spec['channel']
-    print(f'{path} ({mess}) ➜ {serv} #{chan}')
+    print(f'{path} ({mess}) -> {serv} #{chan}')
 
-    if not os.path.isfile(path):
-        print('File not found!')
     fdir, fname = os.path.split(path)
     if len(mess) == 0:
         mess = fname
 
-    for g, c in channels:
-        if g.name == serv and c.name == chan:
-            with open(path, 'rb') as fid:
-                file = discord.File(fid)
-                await c.send(mess, file=file)
+    if not os.path.isfile(path):
+        sent = False
+        stat = 'Not a valid file'
+    else:
+        with open(path, 'rb') as fid:
+            file = discord.File(fid)
+            sent = await send_discord(file, mess, serv, chan)
+        stat = 'Success' if sent else 'Channel not found'
 
+    res = json.dumps({'sent': sent, 'status': stat})
+    writer.write(res.encode())
+    await writer.drain()
     writer.close()
 
 async def main():

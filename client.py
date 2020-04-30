@@ -2,31 +2,36 @@ import os
 import random
 import json
 import toml
-import asyncio
+import socket
 
 bot_dir = os.path.dirname(os.path.realpath(__file__))
 conf = toml.load(open(f'{bot_dir}/conf.toml'))
 
 rand_hex = lambda: hex(random.getrandbits(128))[2:].zfill(32)
 
-async def send_async(spec):
-    reader, writer = await asyncio.open_connection(conf['ip'], conf['port'])
-    writer.write(spec.encode())
-    ret = await reader.read(1024)
+def send_sync(spec):
+    text = json.dumps(spec).encode()
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((conf['ip'], conf['port']))
+        s.sendall(text)
+        ret = s.recv(1024)
     stat = json.loads(ret.decode())
-    writer.close()
     return stat
 
 def send_file(path, message='', server=conf['server'], channel='general'):
-    spec = json.dumps({'path': path, 'message': message, 'server': server, 'channel': channel})
-    return asyncio.run(send_async(spec))
+    return send_sync({
+        'path': path,
+        'message': message,
+        'server': server,
+        'channel': channel
+    })
 
 def send_mpl(fig, message='', ext='png', save_args={}, **kwargs):
     tmp_dir = conf['temp_dir']
     tmp_hex = rand_hex()
     tmp_path = f'{tmp_dir}/plotbot_{tmp_hex}.{ext}'
 
-    fig.savefig(tmp_path, **save_args)
+    fig.savefig(tmp_path, bbox_inches='tight', **save_args)
     ret = send_file(tmp_path, message=message, **kwargs)
     os.remove(tmp_path)
 

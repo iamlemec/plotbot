@@ -5,7 +5,8 @@ import toml
 import asyncio
 
 bot_dir = os.path.dirname(os.path.realpath(__file__))
-conf = toml.load(open(f'{bot_dir}/conf.toml'))
+with open(f'{bot_dir}/conf.toml') as cid:
+    conf = toml.load(cid)
 
 rand_hex = lambda: hex(random.getrandbits(128))[2:].zfill(32)
 
@@ -17,17 +18,17 @@ async def send_async(spec):
     writer.close()
     return stat
 
-def send_file(path, message='', server=conf['server'], channel='general'):
+def send_file(path, server, message='', channel='general'):
     spec = json.dumps({'path': path, 'message': message, 'server': server, 'channel': channel})
     return asyncio.run(send_async(spec))
 
-def send_mpl(fig, message='', ext='png', save_args={}, **kwargs):
+def send_mpl(fig, server, ext='png', save_args={}, **kwargs):
     tmp_dir = conf['temp_dir']
     tmp_hex = rand_hex()
     tmp_path = f'{tmp_dir}/plotbot_{tmp_hex}.{ext}'
 
     fig.savefig(tmp_path, **save_args)
-    ret = send_file(tmp_path, message=message, **kwargs)
+    ret = send_file(tmp_path, server, **kwargs)
     os.remove(tmp_path)
 
     return ret

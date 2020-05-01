@@ -5,8 +5,10 @@ import asyncio
 import discord
 
 bot_dir = os.path.dirname(os.path.realpath(__file__))
-auth = toml.load(open(f'{bot_dir}/auth.toml'))
-conf = toml.load(open(f'{bot_dir}/conf.toml'))
+with open(f'{bot_dir}/auth.toml') as aid:
+    auth = toml.load(aid)
+with open(f'{bot_dir}/conf.toml') as cid:
+    conf = toml.load(cid)
 
 client = discord.Client()
 channels = []

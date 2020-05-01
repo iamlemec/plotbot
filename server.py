@@ -21,7 +21,7 @@ async def on_ready():
         print(g.name)
         for c in g.channels:
             if type(c) is discord.TextChannel:
-                print(c.name)
+                print(f'#{c.name}')
                 channels.append((g, c))
 
 async def send_discord(file, message, server, channel):
